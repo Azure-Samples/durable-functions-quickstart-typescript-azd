@@ -5,8 +5,7 @@ import { ActivityHandler, OrchestrationContext, OrchestrationHandler } from "dur
 const fetchTitleActivityName = "fetchTitleAsync";
 
 const fetchOrchestration: OrchestrationHandler = function* (context: OrchestrationContext) {
-    const logger = context.df.createReplaySafeLogger(context);
-    logger.info("Fetching data.");
+    context.log("Fetching data.");
 
     // List of URLs to fetch titles from
     const urls = [
