@@ -301,6 +301,16 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# TypeScript output
+dist/
+*.tsbuildinfo
+
+# Azure Functions
+local.settings.json
+__blobstorage__
+__queuestorage__
+__azurite_db*__.json
+
 # Visual Studio 6 build log
 *.plg
 
