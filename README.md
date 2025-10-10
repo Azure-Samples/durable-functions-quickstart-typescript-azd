@@ -1,6 +1,6 @@
 <!--
 ---
-name: Durable Functions TypeScript Fan-Out/Fan-In using Azure Developer CLI
+name: Durable Functions TypeScript Fan-Out/Fan-In quickstart - TypeScript
 description: This repository contains a Durable Functions quickstart written in TypeScript demonstrating the fan-out/fan-in pattern. It's deployed to Azure Functions Flex Consumption plan using the Azure Developer CLI (azd). The sample uses managed identity and a virtual network to make sure deployment is secure by default.
 page_type: sample
 products:
@@ -16,7 +16,7 @@ languages:
 ---
 -->
 
-# Durable Functions Fan-Out/Fan-In using Azure Developer CLI
+# Durable Functions Fan-Out/Fan-In quickstart - TypeScript
 
 This template repository contains a Durable Functions sample demonstrating the fan-out/fan-in pattern in TypeScript (using the Azure Functions Node.js v4 programming model). The sample can be easily deployed to Azure using the Azure Developer CLI (`azd`). It uses managed identity and a virtual network to make sure deployment is secure by default. You can opt out of a VNet being used in the sample by setting VNET_ENABLED to false in the parameters.
 
@@ -28,6 +28,7 @@ Durable Functions needs a [backend provider](https://learn.microsoft.com/azure/a
 
 + [Node.js 22+](https://nodejs.org/)
 + [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local)
++ [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli?view=azure-cli-latest)
 + To use Visual Studio Code to run and debug locally:
   + [Visual Studio Code](https://code.visualstudio.com/)
   + [Azure Functions extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
@@ -75,6 +76,12 @@ From the `src` folder, run:
 npm install
 ```
 
+Build the project:
+
+```shell
+npm run build
+```
+
 ### Start Azurite
 The Functions runtime requires a storage component. The line `"AzureWebJobsStorage": "UseDevelopmentStorage=true"` above tells the runtime that the local storage emulator, Azurite, will be used. Azurite needs to be started before running the app, and there are two options to do that:
 * Option 1: Run `npx azurite --skipApiVersionCheck --location ~/azurite-data`
@@ -82,22 +89,46 @@ The Functions runtime requires a storage component. The line `"AzureWebJobsStora
 
 ## Run your app from the terminal
 
-1. From the `src` folder, run this command to start the Functions host locally:
+1. From the `src` folder, run these commands:
 
     ```shell
-    npm start
+    func start
+    ```
+    Once the app is started, you should see the following: 
+
+    ```
+    [2025-10-10T16:50:49.177Z] Worker process started and initialized.
+
+    Functions:
+
+        httpStart: [GET,POST] http://localhost:7071/api/orchestrators/{orchestratorName}
+
+        fetchOrchestration: orchestrationTrigger
+
+        fetchTitleAsync: activityTrigger
     ```
 
-1. From your HTTP test tool in a new terminal (or from your browser), call the HTTP trigger endpoint: <http://localhost:7071/api/FetchOrchestration_HttpStart> to start a new orchestration instance. This orchestration then fans out to several activities to fetch the titles of Microsoft Learn articles in parallel. When the activities finish, the orchestration fans back in and returns the titles as a formatted string. 
+1. From your HTTP test tool in a new terminal (or from your browser), call the HTTP trigger endpoint: <http://localhost:7071/api/orchestrators/fetchOrchestration> to start a new orchestration instance. This orchestration then fans out to several activities to fetch the titles of Microsoft Learn articles in parallel. When the activities finish, the orchestration fans back in and returns the titles as a formatted string. 
 
-1. When you're done, press Ctrl+C in the terminal window to stop the `func.exe` host process.
+    The HTTP endpoint should return several URLs (showing a few below for brevity). The `statusQueryGetUri` provides the orchestration status. 
+    ```json
+    {
+        "id": "9addc67238604701a38d1470874a5f04",
+        "statusQueryGetUri": "http://localhost:7071/runtime/webhooks/durabletask/instances/9addc67238604701a38d1470874a5f04?taskHub=TestHubName&connection=Storage&code=<code>",
+        "sendEventPostUri": "http://localhost:7071/runtime/webhooks/durabletask/instances/9addc67238604701a38d1470874a5f04/raiseEvent/{eventName}?taskHub=TestHubName&connection=Storage&code=<code>",
+        "terminatePostUri": "http://localhost:7071/runtime/webhooks/durabletask/instances/9addc67238604701a38d1470874a5f04/terminate?reason={text}&taskHub=TestHubName&connection=Storage&code<code>",
+    }
+    ```
+
+1. When you're done, press Ctrl+C in the terminal window. 
 
 ## Run your app using Visual Studio Code
 
 1. Open the `src` app folder in a new terminal.
 1. Run the `code .` code command to open the project in Visual Studio Code.
 1. Press **Run/Debug (F5)** to run in the debugger. Select **Debug anyway** if prompted about local emulator not running.
-1. From your HTTP test tool in a new terminal (or from your browser), call the HTTP trigger endpoint: <http://localhost:7071/api/FetchOrchestration_HttpStart> to start a new orchestration instance.
+1. From your HTTP test tool in a new terminal (or from your browser), call the HTTP trigger endpoint: <http://localhost:7071/api/orchestrators/fetchOrchestration> to start a new orchestration instance.
+1. The HTTP endpoint should return several URLs. The `statusQueryGetUri` provides the orchestration status. 
 
 ## Source Code
 Fanning out is easy to do with regular functions, simply send multiple messages to a queue. However, fanning in is more challenging, because you need to track when all the functions are completed and store the outputs.
@@ -135,7 +166,7 @@ const fetchOrchestration: OrchestrationHandler = function* (context: Orchestrati
 
 ## Deploy to Azure
 
-Run this command to provision the function app, with any required Azure resources, and deploy your code:
+In the root directory, run this command to provision the function app, with any required Azure resources, and deploy your code:
 
 ```shell
 azd up
@@ -156,8 +187,22 @@ You're prompted to supply these required deployment parameters:
 | _Azure subscription_ | Subscription in which your resources are created.|
 | _Azure location_ | Azure region in which to create the resource group that contains the new Azure resources. Only regions that currently support the Flex Consumption plan are shown.|
 
-After publish completes successfully, `azd` provides you with the URL endpoints of your new functions, but without the function key values required to access the endpoints. To learn how to obtain these same endpoints along with the required function keys, see [Invoke the function on Azure](https://learn.microsoft.com/azure/azure-functions/create-first-function-azure-developer-cli?pivots=programming-language-typescript#invoke-the-function-on-azure).
+## Test deployed app
 
+Once deployment is done, test the Durable Functions app by making an HTTP request to trigger the start of an orchestration. To get the endpoint quickly, run the following: 
+
+    ```shell
+    az functionapp function list --resource-group <resource-group-name> --name <function-app-name> --query "[].{name:name, url:invokeUrlTemplate}" --output table
+    ```
+
+The _function-app-name/http_start_ is the endpoint, and it should look like:
+ 
+ ```
+ https://<function-app-name>.azurewebsites.net/api/orchestrators/{orchestratorname}
+ ```
+
+Remember to replace the orchestrator name with `fetchOrchestration`.
+    
 ## Redeploy your code
 
 You can run the `azd up` command as many times as you need to both provision your Azure resources and deploy code updates to your function app.

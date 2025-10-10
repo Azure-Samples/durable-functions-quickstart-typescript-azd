@@ -1,7 +1,0 @@
-👋 Welcome to the Azure Functions Quickstart in GitHub Codespaces!
-
-📚 Documentation: https://learn.microsoft.com/azure/azure-functions
-🌟 Learn more about Durable Functions: https://learn.microsoft.com/azure/azure-functions/durable/durable-functions-overview
-🚀 Get started with Azure Developer CLI: https://learn.microsoft.com/azure/developer/azure-developer-cli/
-
-💡 To get started, navigate to the src folder and run 'npm install' followed by 'npm start'

@@ -2,7 +2,7 @@
   "name": "durable-functions-quickstart-typescript-azd",
   "version": "1.0.0",
   "description": "Azure Durable Functions TypeScript quickstart demonstrating the fan-out/fan-in pattern",
-  "main": "dist/src/*.js",
+  "main": "dist/*.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",

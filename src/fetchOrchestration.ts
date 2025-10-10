@@ -63,15 +63,15 @@ df.app.activity(fetchTitleActivityName, {
 
 const httpStart = async (request: HttpRequest, context: InvocationContext): Promise<HttpResponse> => {
     const client = df.getClient(context);
-    const instanceId: string = await client.startNew("fetchOrchestration");
+    const instanceId: string = await client.startNew(request.params.orchestratorName);
 
     context.log(`Started orchestration with ID = '${instanceId}'.`);
 
     return client.createCheckStatusResponse(request, instanceId);
 };
 
-app.http("fetchOrchestration_HttpStart", {
-    route: "FetchOrchestration_HttpStart",
+app.http("httpStart", {
+    route: "orchestrators/{orchestratorName}",
     authLevel: "anonymous",
     extraInputs: [df.input.durableClient()],
     handler: httpStart,
