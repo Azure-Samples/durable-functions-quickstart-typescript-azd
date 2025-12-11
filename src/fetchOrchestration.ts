@@ -72,7 +72,7 @@ const httpStart = async (request: HttpRequest, context: InvocationContext): Prom
 
 app.http("httpStart", {
     route: "orchestrators/{orchestratorName}",
-    authLevel: "anonymous",
+    authLevel: "function",
     extraInputs: [df.input.durableClient()],
     handler: httpStart,
 });
