@@ -6,6 +6,6 @@ metadata:
 services:
   api:
     project: ./src/
-    language: js
+    language: ts
     host: function
     remoteBuild: true
