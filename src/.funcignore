@@ -8,5 +8,4 @@ __queuestorage__
 local.settings.json
 test
 tsconfig.json
-node_modules
 .DS_Store
