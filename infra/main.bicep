@@ -9,44 +9,22 @@ param environmentName string
 @description('Primary location for all resources & Flex Consumption Function App')
 @allowed([
   'australiaeast'
-  'australiasoutheast'
-  'brazilsouth'
-  'canadacentral'
-  'centralindia'
   'centralus'
   'eastasia'
-  'eastus'
   'eastus2'
-  'eastus2euap'
-  'francecentral'
-  'germanywestcentral'
-  'italynorth'
-  'japaneast'
-  'koreacentral'
   'northcentralus'
   'northeurope'
-  'norwayeast'
-  'southafricanorth'
-  'southcentralus'
   'southeastasia'
-  'southindia'
-  'spaincentral'
   'swedencentral'
-  'uaenorth'
   'uksouth'
-  'ukwest'
-  'westcentralus'
-  'westeurope'
-  'westus'
   'westus2'
-  'westus3'
 ])
 @metadata({
   azd: {
     type: 'location'
   }
 })
-param location string
+param location string = 'northcentralus'
 param vnetEnabled bool
 param apiServiceName string = ''
 param apiUserAssignedIdentityName string = ''
@@ -56,6 +34,11 @@ param logAnalyticsName string = ''
 param resourceGroupName string = ''
 param storageAccountName string = ''
 param vNetName string = ''
+param dtsName string = ''
+param taskHubName string = ''
+param dtsLocation string = location
+param dtsSkuName string = 'Consumption'
+param dtsCapacity int = 1
 @description('Id of the user identity to be used for testing and debugging. This is not required in production. Leave empty if not needed.')
 param principalId string = deployer().objectId
 
@@ -63,6 +46,8 @@ var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = { 'azd-env-name': environmentName }
 var functionAppName = !empty(apiServiceName) ? apiServiceName : '${abbrs.webSitesFunctions}api-${resourceToken}'
+var dtsResourceName = !empty(dtsName) ? dtsName : '${abbrs.durableTaskSchedulers}${resourceToken}'
+var taskHubResourceName = !empty(taskHubName) ? taskHubName : '${abbrs.durableTaskHubs}${resourceToken}'
 var deploymentStorageContainerName = 'app-package-${take(functionAppName, 32)}-${take(toLower(uniqueString(functionAppName, resourceToken)), 7)}'
 
 // Organize resources in a resource group
@@ -110,7 +95,7 @@ module api './app/api.bicep' = {
     applicationInsightsName: monitoring.outputs.name
     appServicePlanId: appServicePlan.outputs.resourceId
     runtimeName: 'node'
-    runtimeVersion: '22'
+    runtimeVersion: '20'
     storageAccountName: storage.outputs.name
     enableBlob: storageEndpointConfig.enableBlob
     enableQueue: storageEndpointConfig.enableQueue
@@ -121,6 +106,8 @@ module api './app/api.bicep' = {
     appSettings: {
     }
     virtualNetworkSubnetId: vnetEnabled ? serviceVirtualNetwork.outputs.appSubnetID : ''
+    dtsURL: dts.outputs.dts_URL
+    taskHubName: dts.outputs.TASKHUB_NAME
   }
 }
 
@@ -151,10 +138,11 @@ module storage 'br/public:avm/res/storage/storage-account:0.8.3' = {
 }
 
 // Define the configuration object locally to pass to the modules
+// With Durable Task Scheduler, queue and table storage are no longer needed for Durable Functions
 var storageEndpointConfig = {
   enableBlob: true  // Required for AzureWebJobsStorage, .zip deployment, Event Hubs trigger and Timer trigger checkpointing
-  enableQueue: true  // Required for Durable Functions and MCP trigger
-  enableTable: true  // Required for Durable Functions and OpenAI triggers and bindings
+  enableQueue: false  // Not required when using Durable Task Scheduler
+  enableTable: false  // Not required when using Durable Task Scheduler
   enableFiles: false   // Not required, used in legacy scenarios
   allowUserIdentityPrincipal: true   // Allow interactive user identity to access for testing and debugging
 }
@@ -222,6 +210,50 @@ module monitoring 'br/public:avm/res/insights/component:0.6.0' = {
     tags: tags
     workspaceResourceId: logAnalytics.outputs.resourceId
     disableLocalAuth: true
+  }
+}
+
+// Durable Task Scheduler
+module dts './app/dts.bicep' = {
+  scope: rg
+  name: 'dtsResource'
+  params: {
+    name: dtsResourceName
+    taskhubname: taskHubResourceName
+    location: dtsLocation
+    tags: tags
+    ipAllowlist: [
+      '0.0.0.0/0'
+    ]
+    skuName: dtsSkuName
+    skuCapacity: dtsCapacity
+  }
+}
+
+// Durable Task Data Contributor role ID
+var dtsRoleDefinitionId = '0ad04412-c4d5-4796-b79c-f76d14c8d402'
+
+// Allow access from function app to DTS using user assigned managed identity
+module dtsRoleAssignment 'app/dts-Access.bicep' = {
+  name: 'dtsRoleAssignment'
+  scope: rg
+  params: {
+    roleDefinitionID: dtsRoleDefinitionId
+    principalID: apiUserAssignedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+    dtsName: dts.outputs.dts_NAME
+  }
+}
+
+// Allow the deployer identity to access the DTS dashboard
+module dtsDashboardRoleAssignment 'app/dts-Access.bicep' = {
+  name: 'dtsDashboardRoleAssignment'
+  scope: rg
+  params: {
+    roleDefinitionID: dtsRoleDefinitionId
+    principalID: principalId
+    principalType: 'User'
+    dtsName: dts.outputs.dts_NAME
   }
 }
 
