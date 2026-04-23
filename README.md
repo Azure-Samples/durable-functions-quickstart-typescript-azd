@@ -31,7 +31,7 @@ State for this sample is managed by **[Azure Durable Task Scheduler (DTS)](https
 + A purpose-built data store — no Storage queues/tables required
 + Managed-identity-based auth from your Function App to the scheduler
 
-> DTS is currently in **preview**. This sample uses the preview extension bundle (`Microsoft.Azure.Functions.ExtensionBundle.Preview`) and the `Microsoft.DurableTask/schedulers@2025-04-01-preview` resource provider.
+> This sample uses the standard Functions extension bundle (`Microsoft.Azure.Functions.ExtensionBundle`) and the `Microsoft.DurableTask/schedulers@2025-04-01-preview` resource provider.
 
 ## Prerequisites
 
@@ -188,7 +188,7 @@ docker rm -f dts-emulator
 │       ├── vnet.bicep
 │       └── storage-PrivateEndpoint.bicep
 └── src/
-    ├── host.json              # storageProvider.type = azureManaged; preview bundle
+    ├── host.json              # storageProvider.type = azureManaged; standard bundle
     ├── local.settings.json.sample
     ├── package.json           # durable-functions ^3.1.0, @azure/functions ^4.7.0
     ├── tsconfig.json
