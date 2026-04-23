@@ -31,7 +31,7 @@ State for this sample is managed by **[Azure Durable Task Scheduler (DTS)](https
 + A purpose-built data store — no Storage queues/tables required
 + Managed-identity-based auth from your Function App to the scheduler
 
-> This sample uses the standard Functions extension bundle (`Microsoft.Azure.Functions.ExtensionBundle`) and the `Microsoft.DurableTask/schedulers@2025-04-01-preview` resource provider.
+> This sample uses the standard Functions extension bundle (`Microsoft.Azure.Functions.ExtensionBundle`) and the `Microsoft.DurableTask/schedulers@2026-02-01` resource provider.
 
 ## Prerequisites
 
