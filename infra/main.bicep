@@ -38,7 +38,6 @@ param dtsName string = ''
 param taskHubName string = ''
 param dtsLocation string = location
 param dtsSkuName string = 'Consumption'
-param dtsCapacity int = 1
 @description('Id of the user identity to be used for testing and debugging. This is not required in production. Leave empty if not needed.')
 param principalId string = deployer().objectId
 
@@ -225,7 +224,6 @@ module dts './app/dts.bicep' = {
       '0.0.0.0/0'
     ]
     skuName: dtsSkuName
-    skuCapacity: dtsCapacity
   }
 }
 
