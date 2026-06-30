@@ -1,7 +1,7 @@
 <!--
 ---
-name: Durable Functions TypeScript Fan-Out/Fan-In quickstart (Azure Durable Task Scheduler)
-description: A Durable Functions quickstart written in TypeScript demonstrating the fan-out/fan-in pattern, using the Azure Durable Task Scheduler (DTS) backend. It's deployed to Azure Functions Flex Consumption plan using the Azure Developer CLI (azd). The sample uses managed identity and optionally a virtual network for secure-by-default deployment.
+name: Durable Functions TypeScript Fan-Out/Fan-In (Durable Task Scheduler)
+description: This repository contains a Durable Functions quickstart written in TypeScript demonstrating the fan-out/fan-in pattern. It uses the Azure Durable Task Scheduler (DTS) backend and is deployed to Azure Functions Flex Consumption via the Azure Developer CLI (azd).
 page_type: sample
 products:
 - azure-functions
@@ -16,31 +16,21 @@ languages:
 ---
 -->
 
-# Durable Functions Fan-Out/Fan-In quickstart - TypeScript (Durable Task Scheduler)
+# Durable Functions Fan-Out/Fan-In quickstart - TypeScript (Durable Task Scheduler backend)
 
-This template repository contains a Durable Functions sample demonstrating the fan-out/fan-in pattern in TypeScript (using the Azure Functions Node.js v4 programming model). The sample can be easily deployed to Azure using the Azure Developer CLI (`azd`). It uses managed identity for all service-to-service authentication and optionally a virtual network to make sure deployment is secure by default. You can opt out of a VNet being used in the sample by setting `VNET_ENABLED` to `false` in the parameters.
+This template repository contains a Durable Functions sample demonstrating the fan-out/fan-in pattern in TypeScript (Node.js v4 programming model), backed by the **Azure Durable Task Scheduler (DTS)**. The sample can be easily deployed to Azure using the Azure Developer CLI (`azd`). It uses a user-assigned managed identity and can optionally deploy a virtual network.
 
-[Durable Functions](https://learn.microsoft.com/azure/azure-functions/durable/durable-functions-overview) is part of the Azure Functions offering. It helps orchestrate stateful logic that's long-running or multi-step by providing *durable execution*. An execution is durable when it can continue in another process or machine from the point of failure in the face of interruptions or infrastructure failures. Durable Functions handles automatic retries and state persistence as your orchestrations run to ensure durable execution.
+[Durable Functions](https://learn.microsoft.com/azure/azure-functions/durable/durable-functions-overview) orchestrates stateful, long-running, multi-step logic with *durable execution*. State is persisted by a [backend provider](https://learn.microsoft.com/azure/azure-functions/durable/durable-functions-storage-providers). This sample uses the **[Azure Durable Task Scheduler](https://learn.microsoft.com/azure/azure-functions/durable/durable-task-scheduler/durable-task-scheduler)** provider, a fully managed backend purpose-built for Durable Functions and the Durable Task Framework. It replaces the Azure Storage backend and provides a dedicated dashboard for monitoring orchestrations.
 
-## Backend: Azure Durable Task Scheduler (DTS)
-
-State for this sample is managed by **[Azure Durable Task Scheduler (DTS)](https://learn.microsoft.com/azure/azure-functions/durable/durable-task-scheduler/durable-task-scheduler)**, a fully managed backend provider for Durable Functions. Compared with the classic Azure Storage backend, DTS delivers:
-
-+ Higher and more predictable orchestration throughput
-+ A dedicated dashboard for viewing and debugging orchestrations
-+ A purpose-built data store — no Storage queues/tables required
-+ Managed-identity-based auth from your Function App to the scheduler
-
-> This sample uses the standard Functions extension bundle (`Microsoft.Azure.Functions.ExtensionBundle`) and the `Microsoft.DurableTask/schedulers@2026-02-01` resource provider.
+> This sample uses the standard Functions extension bundle (`Microsoft.Azure.Functions.ExtensionBundle`, version `[4.*, 5.0.0)`), which provides the `azureManaged` storage provider for the Durable Task Scheduler backend.
 
 ## Prerequisites
 
-+ [Node.js 20+](https://nodejs.org/)
-+ [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local)
++ [Node.js 20 or higher](https://nodejs.org/)
++ [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local?pivots=programming-language-javascript#install-the-azure-functions-core-tools)
 + [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
-+ [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli?view=azure-cli-latest)
-+ [Docker](https://www.docker.com/products/docker-desktop/) — required to run the local DTS emulator
-+ To use Visual Studio Code to run and debug locally:
++ [Azurite storage emulator](https://learn.microsoft.com/azure/storage/common/storage-use-azurite)
++ To run/debug in Visual Studio Code:
   + [Visual Studio Code](https://code.visualstudio.com/)
   + [Azure Functions extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
 
@@ -65,143 +55,154 @@ You can initialize a project from this `azd` template in one of these ways:
 
     You can also clone the repository from your own fork in GitHub.
 
-## Run locally against the DTS emulator
+## Provision Azure resources
 
-DTS provides a Docker-based emulator so you can develop and test without provisioning Azure resources.
+This sample uses a remote Durable Task Scheduler (DTS) resource in Azure as the Durable Functions backend.
 
-1. Start the DTS emulator (includes the dashboard on port 8082):
+> [!NOTE]
+> As an alternative to connecting to a remote DTS resource during local development, you can instead use the [Durable Task Scheduler Emulator](https://learn.microsoft.com/azure/azure-functions/durable/durable-task-scheduler/durable-task-scheduler-emulator), which runs locally in a Docker container. The emulator provides a fully functional DTS instance without requiring Azure resources but does require Docker to be installed.
+
+Run these commands to sign in to Azure and provision the required Azure resources, including the DTS instance:
+
+```shell
+azd auth login
+azd provision
+```
+
+You're prompted to supply these required deployment parameters:
+
+| Parameter | Description |
+| ---- | ---- |
+| _Environment name_ | An environment that's used to maintain a unique deployment context for your app. You won't be prompted if you created the local project using `azd init`.|
+| _Azure subscription_ | Subscription in which your resources are created.|
+| _Azure location_ | Azure region in which to create the resource group that contains the new Azure resources. Only regions that currently support the Flex Consumption plan are shown.|
+| _vnetEnabled_ | Whether to deploy with a virtual network for enhanced security. Select `true` or `false`.|
+
+After provisioning completes, a `postprovision` hook automatically generates the `src/local.settings.json` file with your DTS connection information.
+
+## Run your app from the terminal
+
+1. Start the Azurite storage emulator. The Functions runtime requires a storage component for internal state management:
 
     ```shell
-    docker run --name dts-emulator -d -p 8080:8080 -p 8082:8082 mcr.microsoft.com/dts/dts-emulator:latest
+    azurite
     ```
 
-2. Create `src/local.settings.json` from the sample:
-
-    ```shell
-    cp src/local.settings.json.sample src/local.settings.json
-    ```
-
-    The sample file contains the emulator connection string and task hub:
-
-    ```json
-    {
-      "IsEncrypted": false,
-      "Values": {
-        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "node",
-        "DURABLE_TASK_SCHEDULER_CONNECTION_STRING": "Endpoint=http://localhost:8080;Authentication=None",
-        "TASKHUB_NAME": "default"
-      }
-    }
-    ```
-
-3. Install dependencies and start the function host:
+1. In a separate terminal, navigate to the `src` folder, install dependencies, and build the project:
 
     ```shell
     cd src
     npm install
-    npm start
+    npm run build
     ```
 
-4. Trigger the orchestration:
+    The `src` folder is the root folder for the app and contains the `host.json` file.
+
+1. Start the Functions host:
 
     ```shell
-    curl -i http://localhost:7071/api/orchestrators/fetchOrchestration
+    func start
     ```
 
-5. View the run in the emulator dashboard at <http://localhost:8082>.
+    You should see output similar to:
+
+    ```
+    Functions:
+
+            httpStart: [GET,POST] http://localhost:7071/api/orchestrators/fetchOrchestration
+
+            fetchOrchestration: orchestrationTrigger
+
+            fetchTitleAsync: activityTrigger
+    ```
+
+1. From your browser or an HTTP test tool, open the `httpStart` URL shown in the output to start a new orchestration instance. This orchestration fans out to several activities to fetch the titles of Microsoft Learn articles in parallel. When the activities finish, the orchestration fans back in and returns the titles as a formatted string.
+
+    The HTTP endpoint returns a set of URLs that manage the orchestration, which looks like this fragment:
+
+    ```json
+    {
+        "id": "9addc67238604701a38d1470874a5f04",
+        "statusQueryGetUri": "http://localhost:7071/runtime/webhooks/durabletask/instances/9addc67238604701a38d1470874a5f04?taskHub=TestHubName&connection=Storage&code=<code>",
+        "sendEventPostUri": "http://localhost:7071/runtime/webhooks/durabletask/instances/9addc67238604701a38d1470874a5f04/raiseEvent/{eventName}?taskHub=TestHubName&connection=Storage&code=<code>",
+        "terminatePostUri": "http://localhost:7071/runtime/webhooks/durabletask/instances/9addc67238604701a38d1470874a5f04/terminate?reason={text}&taskHub=TestHubName&connection=Storage&code<code>"
+    }
+    ```
+
+1. Navigate to the `statusQueryGetUri` URL in your browser to check the orchestration status. When the orchestration completes, the response looks like this:
+
+    ```json
+    {
+        "name": "fetchOrchestration",
+        "instanceId": "987adada388a496b85bbc5496a54dd58",
+        "runtimeStatus": "Completed",
+        "input": null,
+        "output": "Durable Functions Overview: Stateful Serverless Workflows; Durable Task Scheduler - Durable Task; Azure Functions Scenarios; Use AI tools and models in Azure Functions",
+        "createdTime": "2026-06-22T06:58:58Z",
+        "lastUpdatedTime": "2026-06-22T06:59:00Z"
+    }
+    ```
+
+    The `output` field contains the article titles fetched in parallel by the fan-out/fan-in orchestration.
+
+1. When you're done, press Ctrl+C in the terminal window to stop the `func.exe` host process.
+
+## Run your app using Visual Studio Code
+
+1. Open the `src` app folder in a new terminal.
+1. Run the `code .` code command to open the project in Visual Studio Code.
+1. Ensure Azurite is running, as described above.
+1. Press **Run/Debug (F5)** to run in the debugger. Select **Debug anyway** if prompted about local emulator not running.
+1. From your HTTP test tool in a new terminal (or from your browser), call the HTTP trigger endpoint: <http://localhost:7071/api/orchestrators/fetchOrchestration> to start a new orchestration instance.
+1. The HTTP endpoint should return several URLs. The `statusQueryGetUri` provides the orchestration status.
 
 ## Deploy to Azure
 
-1. Sign in and provision + deploy everything in one step:
-
-    ```shell
-    azd auth login
-    azd up
-    ```
-
-2. Pick an environment name, subscription, and region. The allowed region list is defined in `infra/main.bicep` and defaults to `northcentralus`.
-
-3. Once the deployment finishes, `azd` prints the HTTP trigger URL. You can also run:
-
-    ```shell
-    azd show
-    ```
-
-    to retrieve the function app name and the DTS endpoint.
-
-4. Invoke the orchestration in Azure:
-
-    ```shell
-    curl -i https://<your-function-app>.azurewebsites.net/api/orchestrators/fetchOrchestration
-    ```
-
-### What `azd up` provisions
-
-+ A user-assigned managed identity (UAMI) used by the Function App
-+ An Azure Storage account (blob only — for deployment package and `AzureWebJobsStorage`)
-+ An Azure Functions Flex Consumption plan + Function App (Node 20)
-+ Log Analytics workspace + Application Insights
-+ An **Azure Durable Task Scheduler** (`Microsoft.DurableTask/schedulers`) and a **task hub**
-+ RBAC:
-    + `Storage Blob Data Owner` on the storage account for the UAMI
-    + `Monitoring Metrics Publisher` on Application Insights for the UAMI
-    + `Durable Task Data Contributor` on the DTS scheduler for the UAMI (and for the deployer, so you can open the dashboard)
-
-The Function App is configured with these DTS-specific app settings:
-
-| Setting | Value |
-|---|---|
-| `DURABLE_TASK_SCHEDULER_CONNECTION_STRING` | `Endpoint=<dts-url>;Authentication=ManagedIdentity;ClientID=<uami-client-id>` |
-| `TASKHUB_NAME` | The name of the provisioned task hub |
-
-## Monitor orchestrations
-
-DTS ships a portal-integrated dashboard for browsing orchestrations, inspecting history, and viewing status in near real-time.
-
-+ **Local (emulator):** <http://localhost:8082>
-+ **Azure (deployed):** open the DTS scheduler resource in the [Azure portal](https://portal.azure.com) and click **Dashboard**, or navigate directly to <https://dashboard.durabletask.io> and sign in to your task hub.
-
-You can also query Application Insights for traces emitted by the `DurableTask.AzureManagedBackend` category, which is enabled in `src/host.json`.
-
-## Clean up
+After you've verified the app works locally, deploy your code from the project root to the provisioned function app in Azure:
 
 ```shell
-azd down --purge
-docker rm -f dts-emulator
+azd deploy
 ```
 
-## Project structure
+## Test deployed app
 
-```
-.
-├── azure.yaml                 # azd service descriptor (service: api -> ./src)
-├── infra/
-│   ├── main.bicep             # subscription-scope entry; provisions everything
-│   ├── main.parameters.json
-│   ├── abbreviations.json
-│   └── app/
-│       ├── api.bicep          # Flex Consumption function app + DTS app settings
-│       ├── dts.bicep          # Microsoft.DurableTask/schedulers + taskHubs
-│       ├── dts-Access.bicep   # Durable Task Data Contributor role assignments
-│       ├── rbac.bicep         # storage + app-insights role assignments
-│       ├── vnet.bicep
-│       └── storage-PrivateEndpoint.bicep
-└── src/
-    ├── host.json              # storageProvider.type = azureManaged; standard bundle
-    ├── local.settings.json.sample
-    ├── package.json           # durable-functions ^3.1.0, @azure/functions ^4.7.0
-    ├── tsconfig.json
-    └── fetchOrchestration.ts  # HTTP trigger + orchestrator + activity
+Once deployment is done, test the Durable Functions app by making an HTTP request to trigger the start of an orchestration. To get the function URL with access key, run the following: 
+
+```shell
+func azure functionapp list-functions "$(azd env get-value AZURE_FUNCTION_NAME)" --show-keys
 ```
 
-## Baseline
+Copy the `Invoke url` value for `httpStart`, replace `{orchestratorName}` with `fetchOrchestration`, and open it in a browser or use `curl` to start a new orchestration.
 
-The commit immediately before this sample was migrated to DTS is preserved as the git tag `pre-dts-azure-storage` on the maintainer's fork, for historical reference.
+## Monitor with the DTS dashboard
 
-## Resources
+In Azure, open the deployed Durable Task Scheduler resource (type `Microsoft.DurableTask/schedulers`) in the Azure portal and follow the **Dashboard** link to inspect orchestrations, activities, history, and instance state.
 
-+ [Azure Durable Task Scheduler documentation](https://learn.microsoft.com/azure/azure-functions/durable/durable-task-scheduler/durable-task-scheduler)
-+ [Durable Functions overview](https://learn.microsoft.com/azure/azure-functions/durable/durable-functions-overview)
-+ [Azure Functions Flex Consumption plan](https://learn.microsoft.com/azure/azure-functions/flex-consumption-plan)
-+ [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/)
+To find the scheduler name quickly:
+
+```shell
+azd show
+```
+
+## Redeploy your code
+
+You can run the `azd deploy` command as many times as you need to deploy code updates to your function app. To reprovision infrastructure changes, run `azd provision` again.
+
+>[!NOTE]
+>Deployed code files are always overwritten by the latest deployment package.
+
+## Clean up resources
+
+When you're done working with your function app and related resources, you can use this command to delete the function app and its related resources from Azure and avoid incurring any further costs:
+
+```shell
+azd down
+```
+
+## Troubleshooting
+
+If you see the following transient error after `azd up`, rerun the command:
+
+```
+ERROR: error executing step command 'deploy --all': failed deploying service 'api': publishing zip file: deployment failed: [KuduSpecializer] Kudu has been restarted during deployment
+```
