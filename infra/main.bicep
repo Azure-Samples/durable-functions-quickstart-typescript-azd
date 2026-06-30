@@ -24,7 +24,7 @@ param environmentName string
     type: 'location'
   }
 })
-param location string = 'northcentralus'
+param location string
 param vnetEnabled bool
 param apiServiceName string = ''
 param apiUserAssignedIdentityName string = ''
@@ -259,3 +259,5 @@ output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
 output SERVICE_API_NAME string = api.outputs.SERVICE_API_NAME
 output AZURE_FUNCTION_NAME string = api.outputs.SERVICE_API_NAME
+output DTS_ENDPOINT string = dts.outputs.dts_URL
+output TASKHUB_NAME string = dts.outputs.TASKHUB_NAME
