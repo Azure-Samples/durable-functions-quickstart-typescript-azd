@@ -63,7 +63,7 @@ df.app.activity(fetchTitleActivityName, {
 
 const httpStart = async (request: HttpRequest, context: InvocationContext): Promise<HttpResponse> => {
     const client = df.getClient(context);
-    const instanceId: string = await client.startNew(request.params.orchestratorName);
+    const instanceId: string = await client.startNew("fetchOrchestration");
 
     context.log(`Started orchestration with ID = '${instanceId}'.`);
 
@@ -71,8 +71,21 @@ const httpStart = async (request: HttpRequest, context: InvocationContext): Prom
 };
 
 app.http("httpStart", {
-    route: "orchestrators/{orchestratorName}",
-    authLevel: "anonymous",
+    route: "orchestrators/fetchOrchestration",
+    authLevel: "function",
     extraInputs: [df.input.durableClient()],
     handler: httpStart,
 });
+
+// To support starting any orchestration by name, replace the registration above with:
+// app.http("httpStart", {
+//     route: "orchestrators/{orchestratorName}",
+//     authLevel: "function",
+//     extraInputs: [df.input.durableClient()],
+//     handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponse> => {
+//         const client = df.getClient(context);
+//         const instanceId: string = await client.startNew(request.params.orchestratorName);
+//         context.log(`Started orchestration with ID = '${instanceId}'.`);
+//         return client.createCheckStatusResponse(request, instanceId);
+//     },
+// });

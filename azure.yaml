@@ -9,3 +9,11 @@ services:
     language: js
     host: function
     remoteBuild: false
+hooks:
+  postprovision:
+    windows:
+      shell: pwsh
+      run: ./scripts/postprovision.ps1
+    posix:
+      shell: sh
+      run: ./scripts/postprovision.sh
