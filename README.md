@@ -116,7 +116,7 @@ After provisioning completes, a `postprovision` hook automatically generates the
             fetchTitleAsync: activityTrigger
     ```
 
-1. From your browser or an HTTP test tool, open the `httpStart` URL shown in the output to start a new orchestration instance. This orchestration fans out to several activities to fetch the titles of Microsoft Learn articles in parallel. When the activities finish, the orchestration fans back in and returns the titles as a formatted string.
+1. From your HTTP test tool in a new terminal (or from your browser), call the HTTP trigger endpoint: <http://localhost:7071/api/orchestrators/fetchOrchestration> to start a new orchestration instance. Authorization level `function` endpoints don't require an access key when running locally. This orchestration fans out to several activities to fetch the titles of Microsoft Learn articles in parallel. When the activities finish, the orchestration fans back in and returns the titles as a formatted string.
 
     The HTTP endpoint returns a set of URLs that manage the orchestration, which looks like this fragment:
 
@@ -172,7 +172,7 @@ Once deployment is done, test the Durable Functions app by making an HTTP reques
 func azure functionapp list-functions "$(azd env get-value AZURE_FUNCTION_NAME)" --show-keys
 ```
 
-Copy the `Invoke url` value for `httpStart`, replace `{orchestratorName}` with `fetchOrchestration`, and open it in a browser or use `curl` to start a new orchestration.
+Copy the `Invoke url` value for `httpStart` and open it in a browser or use `curl` to start a new orchestration. The invoke URL includes the function access key required by the deployed `httpStart` endpoint.
 
 ## Monitor with the DTS dashboard
 
